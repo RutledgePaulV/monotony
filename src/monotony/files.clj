@@ -56,17 +56,17 @@
 
 (defn find-unparseable-files [root]
   (sort-by :file
-    (for [file  (get-tf-files-deep root)
-          :let [content (slurp file)
-                lines   (vec (strings/split-lines content))
-                e       (try (parse/terraform-parser content) nil (catch Exception e e))]
-          :when (some? e)
-          error (deref e)]
-      (merge
-        {:file file
-         :text (when (<= (:line error) (count lines))
-                 (nth lines (dec (:line error))))}
-        error))))
+           (for [file  (get-tf-files-deep root)
+                 :let [content (slurp file)
+                       lines   (vec (strings/split-lines content))
+                       e       (try (parse/terraform-parser content) nil (catch Exception e e))]
+                 :when (some? e)
+                 error (deref e)]
+             (merge
+               {:file file
+                :text (when (<= (:line error) (count lines))
+                        (nth lines (dec (:line error))))}
+               error))))
 
 (defn analyze [dir]
   (letfn [(is-git-path? [path]
@@ -85,3 +85,24 @@
     (inner-analyze dir)))
 
 
+(defn numbers-to-ranges [xs]
+  (->> (miss/contiguous-by identity inc xs)
+       (map (juxt first last))
+       (sort)))
+
+(defn view-unparseable-sections [dir]
+  (->> (find-unparseable-files dir)
+       (partition-by :file)
+       (sort-by (comp :file first))
+       (run! (fn [xs]
+               (let [file    (:file (first xs))
+                     content (vec (strings/split-lines (slurp file)))
+                     ranges  (numbers-to-ranges (map :line xs))]
+                 (println (.getAbsolutePath file))
+                 (println)
+                 (doseq [[start stop] ranges]
+                   (println (str "  " start " - " stop))
+                   (println (strings/join \newline (map strings/trim (subvec content (dec start) stop))))
+                   (println))
+                 (println)
+                 (println))))))

@@ -1,5 +1,7 @@
 lexer grammar TerraformLexer;
 
+// BEGIN KEYWORDS
+
 OUTPUT
    : 'output'
    ;
@@ -64,12 +66,16 @@ DOT
    : '.'
    ;
 
-EQUALS
+ASSIGNMENT
     : '='
     ;
 
 COMMA
     : ','
+    ;
+
+NEGATE
+    : '!'
     ;
 
 COLON
@@ -83,7 +89,6 @@ FOR
 QUESTION
     : '?'
     ;
-
 
 LBRACK
    : '['
@@ -109,8 +114,8 @@ RPAREN
    : ')'
    ;
 
-EOF_
-   : '<<EOF' .*? 'EOF'
+DYNAMIC
+   : 'dynamic'
    ;
 
 NULL_
@@ -125,10 +130,9 @@ MINUS
     : '-'
     ;
 
-SLASH
+FORWARD_SLASH
     : '/'
     ;
-
 
 PERCENT
     : '%'
@@ -150,11 +154,11 @@ LTE
     : '<='
     ;
 
-EQUALITY
+EQUALS
     : '=='
     ;
 
- NOT_EQUALITY
+ NOT_EQUALS
     : '!='
     ;
 
@@ -166,12 +170,8 @@ EQUALITY
     : '||'
     ;
 
-fragment DIGIT
-   : [0-9]
-   ;
-
-NATURAL_NUMBER
-   : DIGIT+
+EOF_
+   : '<<EOF' .*? 'EOF'
    ;
 
 BOOL
@@ -179,17 +179,26 @@ BOOL
    | 'false'
    ;
 
-MULTILINESTRING
-   : '<<-EOF' .*? 'EOF'
+
+// BEGIN NUMBER PARSING
+
+NUMBER
+   : [0-9]+ DOT [0-9]*
+   | [0-9]+
+   ;
+
+
+// BEGIN STRING PARSING
+
+IDENTIFIER
+   : [a-zA-Z_] ([a-zA-Z0-9_-])*
    ;
 
 STRING
    : '"' ( '\\"' | ~["\r\n] )* '"'
    ;
 
-IDENTIFIER
-   : [a-zA-Z] ([a-zA-Z0-9_-])*
-   ;
+// BEGIN COMMENT PARSING
 
 COMMENT
   : ('#' | '//') ~ [\r\n]* -> channel(HIDDEN)
@@ -199,6 +208,9 @@ BLOCKCOMMENT
   : '/*' .*? '*/' -> channel(HIDDEN)
   ;
 
+// BEGIN WHITESPACE PARSING
+
 WS
    : [ \r\n\t]+ -> skip
    ;
+
