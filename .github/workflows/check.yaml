@@ -18,6 +18,8 @@ jobs:
           java-version: '19'
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@10.3
+        with:
+          cli: latest
       - name: Cache clojure dependencies
         uses: actions/cache@v3
         with:
