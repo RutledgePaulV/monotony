@@ -90,9 +90,14 @@ identifier
    | DYNAMIC
    ;
 
-string_literal
-   : STRING
+string_content
+   : TEXT
+   | IN_STRING_INTERPOLATE expression RCURL
    ;
+
+string_literal
+    : DQUOTE string_content* DQUOTE
+    ;
 
 number_literal
     : NUMBER
@@ -169,14 +174,10 @@ expression
 
 block_name
    : identifier
-   | simple_string
+   | string_literal
    ;
 
 block_type
    : identifier
-   | simple_string
+   | string_literal
    ;
-
-simple_string
-    : string_literal
-    ;
