@@ -55,18 +55,11 @@
        (miss/map-vals clean-string)))
 
 (defn find-unparseable-files [root]
-  (sort-by :file
-           (for [file  (get-tf-files-deep root)
-                 :let [content (slurp file)
-                       lines   (vec (strings/split-lines content))
-                       e       (try (parse/terraform-parser content) nil (catch Exception e e))]
-                 :when (some? e)
-                 error (deref e)]
-             (merge
-               {:file file
-                :text (when (<= (:line error) (count lines))
-                        (nth lines (dec (:line error))))}
-               error))))
+  (for [file  (get-tf-files-deep root)
+        :let [content (slurp file)
+              e       (try (parse/terraform-parser content) nil (catch Exception e e))]
+        :when (some? e)]
+    file))
 
 (defn analyze [dir]
   (letfn [(is-git-path? [path]

@@ -16,10 +16,7 @@ top_level_block
     | terraform_block
     | locals_block
     | moved_block
-    | string_literal
     ;
-
-
 
  variable_block
     : VARIABLE block_name LCURL (block_entry)* RCURL
@@ -97,9 +94,9 @@ string_content
    | IN_STRING_ESCAPE_DQUOTE
    | IN_STRING_ESCAPE_INTERPOLATE
    | IN_STRING_DOLLAR
+   | RCURL
    | TEXT
    ;
-
 
 string_literal
     : DQUOTE string_content* DQUOTE
