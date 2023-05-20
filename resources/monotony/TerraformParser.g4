@@ -16,6 +16,7 @@ top_level_block
     | terraform_block
     | locals_block
     | moved_block
+    | expression
     ;
 
  variable_block
@@ -87,6 +88,7 @@ identifier
    | TERRAFORM
    | PROVIDER
    | DYNAMIC
+   | RESOURCE
    ;
 
 string_content

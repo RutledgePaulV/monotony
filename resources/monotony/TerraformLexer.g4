@@ -217,7 +217,7 @@ IN_STRING_INTERPOLATE: '${' -> pushMode(EMBEDDED);
 IN_STRING_DOLLAR: '$' ;
 IN_STRING_DQUOTE: '"' -> type(DQUOTE), popMode;
 IN_STRING_RCURL: '}' -> type(RCURL), popMode;
-TEXT: ( IN_STRING_DOLLAR | IN_STRING_ESCAPE_DQUOTE | IN_STRING_ESCAPE_INTERPOLATE | ~["\r\n$]+ ) ;
+TEXT: (~('"' | '\\' | '\r' | '\n' | '$') | '\\' ('"' | '\\' | 'n' | 'r'))+;
 
 mode EMBEDDED;
 E_LCURL: '{' -> type(LCURL), pushMode(DEFAULT_MODE);
