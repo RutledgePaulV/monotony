@@ -214,10 +214,10 @@ mode IN_STRING;
 IN_STRING_ESCAPE_INTERPOLATE: '$${';
 IN_STRING_ESCAPE_DQUOTE: '\\"' ;
 IN_STRING_INTERPOLATE: '${' -> pushMode(EMBEDDED);
-IN_STRING_DOLLAR: '$' ;
+IN_STRING_DOLLAR: '$';
 IN_STRING_DQUOTE: '"' -> type(DQUOTE), popMode;
 IN_STRING_RCURL: '}' -> type(RCURL), popMode;
-TEXT: (~('"' | '\\' | '\r' | '\n' | '$') | '\\' ('"' | '\\' | 'n' | 'r'))+;
+TEXT: (~('"' | '\\' | '\r' | '\n' | '$') | ('\\' ('"' | '\\' | 'n' | 'r')))+;
 
 mode EMBEDDED;
 E_LCURL: '{' -> type(LCURL), pushMode(DEFAULT_MODE);

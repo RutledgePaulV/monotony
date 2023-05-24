@@ -56,8 +56,14 @@ top_level_block
      ;
 
 block_entry
+   : assignment
+   | namespaced_block
+   | dynamic_block
+   | typed_block
+   ;
+
+assignment
    : identifier ASSIGNMENT expression
-   | inner_block
    ;
 
 dynamic_block
@@ -71,12 +77,6 @@ typed_block
 namespaced_block
     : identifier LCURL (block_entry)* RCURL
     ;
-
-inner_block
-   : namespaced_block
-   | typed_block
-   | dynamic_block
-   ;
 
 identifier
    : IDENTIFIER
@@ -97,6 +97,7 @@ string_content
    | IN_STRING_ESCAPE_INTERPOLATE
    | IN_STRING_DOLLAR
    | RCURL
+   | LCURL
    | TEXT
    ;
 
@@ -123,11 +124,11 @@ function_call
     ;
 
 list_
-     : LBRACK (expression (COMMA expression)* COMMA?)? RBRACK
-     | LBRACK FOR identifier IN expression COLON expression RBRACK
-     | LBRACK FOR identifier IN expression COLON expression IF expression RBRACK
-     | LBRACK FOR identifier COMMA identifier IN expression COLON expression RBRACK
-     | LBRACK FOR identifier COMMA identifier IN expression COLON expression IF expression RBRACK
+     : LBRACK (expression (COMMA expression)* COMMA?)? RBRACK # list_entries
+     | LBRACK FOR identifier IN expression COLON expression RBRACK # list_comprehension
+     | LBRACK FOR identifier IN expression COLON expression IF expression RBRACK # conditional_list_comprehension
+     | LBRACK FOR identifier COMMA identifier IN expression COLON expression RBRACK # destructured_list_comprehension
+     | LBRACK FOR identifier COMMA identifier IN expression COLON expression IF expression RBRACK # conditional_destructured_list_comprehension
     ;
 
 map_key
@@ -141,40 +142,41 @@ map_entry
     ;
 
 map_
-    : LCURL (map_entry COMMA?)* RCURL
-    | LCURL FOR identifier IN expression COLON expression ARROW expression RCURL
-    | LCURL FOR identifier IN expression COLON expression ARROW expression IF expression RCURL
-    | LCURL FOR identifier COMMA identifier IN expression COLON expression ARROW expression RCURL
-    | LCURL FOR identifier COMMA identifier IN expression COLON expression ARROW expression IF expression RCURL
+    : LCURL (map_entry COMMA?)* RCURL # map_entries
+    | LCURL FOR identifier IN expression COLON expression ARROW expression RCURL # map_comprehension
+    | LCURL FOR identifier IN expression COLON expression ARROW expression IF expression RCURL # conditional_map_comprehension
+    | LCURL FOR identifier COMMA identifier IN expression COLON expression ARROW expression RCURL # destructured_map_comprehension
+    | LCURL FOR identifier COMMA identifier IN expression COLON expression ARROW expression IF expression RCURL # conditional_destructured_map_comprehension
     ;
 
+
 expression
-    : expression PLUS expression
-    | expression MINUS expression
-    | expression STAR expression
-    | expression FORWARD_SLASH expression
-    | expression PERCENT expression
-    | expression EQUALS expression
-    | expression NOT_EQUALS expression
-    | expression LT expression
-    | expression GT expression
-    | expression LTE expression
-    | expression GTE expression
-    | expression AND expression
-    | expression OR expression
-    | function_call
-    | list_
-    | map_
-    | LPAREN expression RPAREN
-    | NEGATE expression
-    | null_literal
-    | string_literal
-    | number_literal
-    | boolean
-    | identifier
-    | expression QUESTION expression COLON expression
-    | expression DOT (identifier | STAR)
-    | expression LBRACK (expression | STAR) RBRACK
+    : expression PLUS expression # expression_plus
+    | expression MINUS expression # expression_minus
+    | expression STAR expression # expression_star
+    | expression FORWARD_SLASH expression # expression_forward_slash
+    | expression PERCENT expression # expression_percent
+    | expression EQUALS expression # expression_equals
+    | expression NOT_EQUALS expression # expression_not_equals
+    | expression LT expression # expression_lt
+    | expression GT expression # expression_gt
+    | expression LTE expression # expression_lte
+    | expression GTE expression # expression_gte
+    | expression AND expression # expression_and
+    | expression OR expression # expression_or
+    | function_call # function_call_
+    | list_ # list__
+    | map_ # map__
+    | LPAREN expression RPAREN # expression_paren
+    | NEGATE expression # expression_negate
+    | null_literal # null_literal_
+    | string_literal # string_literal_
+    | number_literal # number_literal_
+    | boolean # boolean_
+    | identifier # identifier_
+    | expression QUESTION expression COLON expression # expression_ternary
+    | expression DOT (identifier | STAR) # expression_dot
+    | expression LBRACK (expression | STAR) RBRACK # expression_bracket
     ;
 
 block_name

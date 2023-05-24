@@ -8,7 +8,7 @@
   (antlr/parser
     (.getAbsolutePath (io/file (io/resource "monotony/TerraformLexer.g4")))
     (.getAbsolutePath (io/file (io/resource "monotony/TerraformParser.g4")))
-    {}))
+    {:use-alternates? true}))
 
 (def parser
   (delay (create-parser)))

@@ -4,7 +4,8 @@
  :deps
  {org.clojars.rutledgepaulv/missing {:mvn/version "0.1.41"}
   cli-matic/cli-matic               {:mvn/version "0.5.4"}
-  clj-antlr/clj-antlr               {:mvn/version "0.2.12"}}
+  clj-antlr/clj-antlr               {:mvn/version "0.2.12"}
+  meander/epsilon                   {:mvn/version "0.0.650"}}
 
  :aliases
  {:test      {:extra-paths ["test" "resources-test"]

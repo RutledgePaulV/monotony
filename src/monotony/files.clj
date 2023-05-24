@@ -35,6 +35,13 @@
        (map #(.getParentFile %))
        (distinct)))
 
+(defn get-flattened-dirs [root]
+  (->> (get-tf-files-deep root)
+       (group-by #(.getParentFile %))
+       (miss/map-groups slurp)
+       (miss/reduce-groups (fn [a x] (strings/join \newline [a x])))
+       (miss/map-vals parse/terraform-parser)))
+
 (defn find-terraform-modules [root]
   (->> (get-terraform-directories root)
        (remove is-plan-dir?)))
