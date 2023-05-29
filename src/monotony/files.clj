@@ -2,9 +2,10 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as strings]
             [missing.core :as miss]
-            [monotony.parse :as parse])
-  (:import (java.io File)
-           (java.nio.file Paths)))
+            [monotony.parse :as parse]
+            [meander.epsilon :as m])
+  (:refer-clojure :exclude [find])
+  (:import (java.io File)))
 
 (defn is-tf-file? [^File file]
   (strings/ends-with? (.getName file) ".tf"))
@@ -50,17 +51,6 @@
   (->> (get-terraform-directories root)
        (filter is-plan-dir?)))
 
-(defn clean-string [s]
-  (-> s (miss/lstrip "\"") (miss/rstrip "\"")))
-
-(defn extract-dependencies [dir]
-  (->> (get-tf-files-shallow dir)
-       (map slurp)
-       (mapcat parse/terraform-parser)
-       (parse/extract-module-references)
-       (miss/map-keys clean-string)
-       (miss/map-vals clean-string)))
-
 (defn find-unparseable-files [root]
   (for [file (get-tf-files-deep root)
         :let [content (slurp file)
@@ -73,27 +63,16 @@
                   (remove nil?)
                   (mapv #(select-keys % [:line :message])))}))
 
-(defn analyze [dir]
-  (letfn [(is-git-path? [path]
-            (strings/starts-with? path "git@"))
-          (inner-analyze [resolved]
-            {:path         resolved
-             :dependencies (into {}
-                                 (for [[module path] (extract-dependencies resolved)]
-                                   [module (if (is-git-path? path)
-                                             (inner-analyze
-                                               (str (.resolve (Paths/get ^String dir (into-array String []))
-                                                              ^String (cond-> (str ".terraform/" module)
-                                                                        (strings/includes? path "//")
-                                                                        (str "/" (second (re-find path "//([^?]+)")))))))
-                                             (inner-analyze (str (.resolve (Paths/get ^String resolved (into-array String [])) ^String path))))]))})]
-    (inner-analyze dir)))
-
 
 (defn numbers-to-ranges [xs]
   (->> (miss/contiguous-by identity inc xs)
        (map (juxt first last))
        (sort)))
+
+(defmacro find [directory pattern expression]
+  `(for [[dir# content#] (get-flattened-dirs ~directory)]
+     (->> (miss/walk-seq content#)
+          (mapcat (fn [form#] (m/search form# ~pattern ~expression))))))
 
 (defn view-unparseable-sections [dir]
   (->> (find-unparseable-files dir)

@@ -92,13 +92,13 @@ identifier
    ;
 
 string_content
-   : IN_STRING_INTERPOLATE expression RCURL
-   | IN_STRING_ESCAPE_DQUOTE
-   | IN_STRING_ESCAPE_INTERPOLATE
-   | IN_STRING_DOLLAR
-   | RCURL
-   | LCURL
-   | TEXT
+   : IN_STRING_INTERPOLATE expression RCURL # string_interpolate
+   | IN_STRING_ESCAPE_DQUOTE # string_content_
+   | IN_STRING_ESCAPE_INTERPOLATE # string_content_
+   | IN_STRING_DOLLAR # string_content_
+   | RCURL # string_content_
+   | LCURL # string_content_
+   | TEXT # string_content_
    ;
 
 string_literal

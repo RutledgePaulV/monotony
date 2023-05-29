@@ -1,14 +1,5 @@
-(ns monotony.query
-  (:require [meander.epsilon :as m]
-            [missing.core :as miss]
-            [monotony.files :as files]))
-
-(defmacro find [directory pattern expression]
-  `(for [[dir# content#] (files/get-flattened-dirs ~directory)]
-     (->> (miss/walk-seq content#)
-          (mapcat
-            (fn [form#]
-              (m/search form# ~pattern ~expression))))))
+(ns monotony.ast
+  (:require [clojure.string :as strings]))
 
 (defmulti parse-node->ast (fn [node] (first node)))
 
@@ -23,13 +14,28 @@
   (recurse (second node)))
 
 (defmethod parse-node->ast :string_literal [node]
+  (let [children (map recurse (butlast (drop 2 node)))]
+    (cond
+      (= 1 (bounded-count 2 children))
+      (first children)
+      (empty? children)
+      ""
+      :else
+      {:kind     :string-concatenation
+       :children children})))
+
+(defmethod parse-node->ast :string_interpolate [node]
   (recurse (nth node 2)))
 
 (defmethod parse-node->ast :string_content [node]
   (second node))
 
-(defmethod parse-node->ast :identifier [node]
+(defmethod parse-node->ast :string_content_ [node]
   (second node))
+
+(defmethod parse-node->ast :identifier [node]
+  {:kind  :identifier
+   :value (second node)})
 
 (defmethod parse-node->ast :identifier_ [node]
   (recurse (second node)))
@@ -89,7 +95,10 @@
   (recurse (second node)))
 
 (defmethod parse-node->ast :number_literal [node]
-  (Long/parseLong (second node)))
+  (try
+    (Long/parseLong (strings/join "" (rest node)))
+    (catch NumberFormatException e
+      (Double/parseDouble (strings/join "" (rest node))))))
 
 (defmethod parse-node->ast :number_literal_ [node]
   (recurse (second node)))
@@ -132,12 +141,68 @@
    :key-emission   (recurse (nth node 7))
    :value-emission (recurse (nth node 9))})
 
+(defmethod parse-node->ast :destructured_map_comprehension [node]
+  {:kind           :destructured-map-comprehension
+   :key            (recurse (nth node 3))
+   :value          (recurse (nth node 3))
+   :iterator       (recurse (nth node 7))
+   :key-emission   (recurse (nth node 9))
+   :value-emission (recurse (nth node 11))})
+
+(defmethod parse-node->ast :conditional_destructured_map_comprehension [node]
+  {:kind           :conditional-destructured-map-comprehension
+   :key            (recurse (nth node 3))
+   :value          (recurse (nth node 3))
+   :iterator       (recurse (nth node 7))
+   :key-emission   (recurse (nth node 9))
+   :value-emission (recurse (nth node 11))
+   :condition      (recurse (nth node 13))})
+
+(defmethod parse-node->ast :conditional_map_comprehension [node]
+  {:kind           :conditional-map-comprehension
+   :variable       (recurse (nth node 3))
+   :iterator       (recurse (nth node 5))
+   :key-emission   (recurse (nth node 7))
+   :value-emission (recurse (nth node 9))
+   :condition      (recurse (nth node 11))})
+
 (defmethod parse-node->ast :map__ [node]
   (recurse (second node)))
 
-(defmethod parse-node->ast :list_ [node]
+(defmethod parse-node->ast :list_entries [node]
   {:kind     :list
-   :children (map recurse (remove string? (drop 1 node)))})
+   :children (map recurse (remove string? (rest node)))})
+
+(defmethod parse-node->ast :list_comprehension [node]
+  {:kind       :list-comprehension
+   :variable   (recurse (nth node 3))
+   :iterator   (recurse (nth node 5))
+   :expression (recurse (nth node 7))})
+
+(defmethod parse-node->ast :conditional_list_comprehension [node]
+  {:kind       :conditional-list-comprehension
+   :variable   (recurse (nth node 3))
+   :iterator   (recurse (nth node 5))
+   :expression (recurse (nth node 7))
+   :condition  (recurse (nth node 9))})
+
+(defmethod parse-node->ast :destructured_list_comprehension [node]
+  {:kind       :destructured-list-comprehension
+   :key        (recurse (nth node 3))
+   :value      (recurse (nth node 5))
+   :iterator   (recurse (nth node 7))
+   :expression (recurse (nth node 9))})
+
+(defmethod parse-node->ast :conditional_destructured_list_comprehension [node]
+  {:kind       :conditional-destructured-list-comprehension
+   :key        (recurse (nth node 3))
+   :value      (recurse (nth node 5))
+   :iterator   (recurse (nth node 7))
+   :expression (recurse (nth node 9))
+   :condition  (recurse (nth node 11))})
+
+(defmethod parse-node->ast :list_ [node]
+  (recurse (second node)))
 
 (defmethod parse-node->ast :list__ [node]
   (recurse (second node)))
@@ -154,7 +219,7 @@
 (defmethod parse-node->ast :function_call [node]
   {:kind      :function-call
    :function  (recurse (second node))
-   :arguments (map recurse (remove #{","} (butlast (drop 3 node))))})
+   :arguments (map recurse (remove string? (drop 3 node)))})
 
 (defmethod parse-node->ast :function_call_ [node]
   (recurse (second node)))
@@ -183,8 +248,3 @@
   {:kind  :index-access
    :left  (recurse (second node))
    :right (recurse (nth node 3))})
-
-(defn parse->ast [directory]
-  (->> (files/get-flattened-dirs directory)
-       (miss/map-vals recurse)
-       (miss/map-keys #(.getAbsolutePath %))))
