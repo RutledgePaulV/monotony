@@ -8,6 +8,12 @@
     (parse-node->ast node)
     node))
 
+(defn recurse-to-string [node]
+  (let [converted (recurse node)]
+    (if (and (map? converted) (= :identifier (:kind converted)))
+      (:value converted)
+      converted)))
+
 (defmethod parse-node->ast :default [node] node)
 
 (defmethod parse-node->ast :string_literal_ [node]
@@ -120,8 +126,8 @@
 
 (defmethod parse-node->ast :resource_block [node]
   {:kind     :resource
-   :type     (recurse (nth node 2))
-   :name     (recurse (nth node 3))
+   :type     (recurse-to-string (nth node 2))
+   :name     (recurse-to-string (nth node 3))
    :children (map recurse (butlast (drop 5 node)))})
 
 (defmethod parse-node->ast :top_level_block [node]
@@ -231,7 +237,7 @@
 
 (defmethod parse-node->ast :module_block [node]
   {:kind     :module
-   :name     (recurse (nth node 2))
+   :name     (recurse-to-string (nth node 2))
    :children (map recurse (remove string? (drop 4 node)))})
 
 

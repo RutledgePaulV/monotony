@@ -1,6 +1,5 @@
-module "my_module" {
-  source = "./testing"
-  thing = ""
+variable "thing" {
+  type = string
 }
 
 module "git_example" {

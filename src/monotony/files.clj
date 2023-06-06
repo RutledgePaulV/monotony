@@ -43,6 +43,12 @@
        (miss/reduce-groups (fn [a x] (strings/join \newline [a x])))
        (miss/map-vals parse/terraform-parser)))
 
+(defn get-flattened-dir [root]
+  (->> (get-tf-files-shallow root)
+       (map slurp)
+       (strings/join \newline)
+       (parse/terraform-parser)))
+
 (defn find-terraform-modules [root]
   (->> (get-terraform-directories root)
        (remove is-plan-dir?)))
@@ -70,9 +76,15 @@
        (sort)))
 
 (defmacro find [directory pattern expression]
-  `(for [[dir# content#] (get-flattened-dirs ~directory)]
-     (->> (miss/walk-seq content#)
-          (mapcat (fn [form#] (m/search form# ~pattern ~expression))))))
+  `(->> (for [[dir# content#] (get-flattened-dirs ~directory)]
+          (->> (miss/walk-seq content#)
+               (mapcat (fn [form#] (m/search form# ~pattern ~expression)))))
+        (mapcat identity)))
+
+(defmacro find-shallow [directory pattern expression]
+  `(->> (get-flattened-dir ~directory)
+        (miss/walk-seq)
+        (mapcat (fn [form#] (m/search form# ~pattern ~expression)))))
 
 (defn view-unparseable-sections [dir]
   (->> (find-unparseable-files dir)
