@@ -1,0 +1,156 @@
+(ns monotony.automation
+  (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as strings]
+            [monotony.utils :as utils]
+            [babashka.process :as process])
+  (:refer-clojure :exclude (apply))
+  (:import (java.io ByteArrayInputStream File)
+           (java.nio.file Files)
+           (java.nio.file.attribute FileAttribute)
+           (org.apache.commons.io.output ByteArrayOutputStream)))
+
+(def REGEX #"plugin_cache_dir\s*=\s*\"?([^\s\"]+)\"?(\R|$)")
+
+(defn detect-plugin-cache-dir []
+  (when-some [file (io/file (System/getProperty "user.home") ".terraformrc")]
+    (when (and (.exists file) (.canRead file))
+      (second (re-find REGEX (slurp file))))))
+
+(defn get-tf-plugin-cache-dir []
+  (or (System/getenv "TF_PLUGIN_CACHE_DIR")
+      (some-> (detect-plugin-cache-dir)
+              (strings/replace "$HOME" (System/getProperty "user.home")))
+      (some-> (System/getProperty "user.home")
+              (io/file ".terraform.d" "plugin-cache")
+              (.getAbsolutePath))))
+
+(defn new-temp-dir []
+  (.toFile (Files/createTempDirectory "monotony" (into-array FileAttribute []))))
+
+(defn new-context
+  ([] (new-context {}))
+  ([context-to-clone]
+   (merge context-to-clone {:dir (new-temp-dir)})))
+
+(defn file->bytes [^File f]
+  (with-open [in  (io/input-stream (io/file f))
+              out (ByteArrayOutputStream.)]
+    (io/copy in out)
+    (.toByteArray out)))
+
+(defn is-in-terraform-dir? [path]
+  (or
+    (= ".terraform" path)
+    (strings/ends-with? path "/.terraform")
+    (strings/starts-with? path ".terraform/")
+    (strings/includes? path "/.terraform/")))
+
+(defn dir->content [dir]
+  (let [root (io/file dir)]
+    (->> (file-seq root)
+         (filter #(.isFile %))
+         (remove #(is-in-terraform-dir? (.getAbsolutePath %)))
+         (map (fn [^File x] [(str (.relativize (.toPath root) (.toPath x))) (file->bytes x)]))
+         (into {}))))
+
+(defn content->dir [dir content]
+  (doseq [[path bites] content
+          :let [f (io/file dir path)]]
+    (io/make-parents f)
+    (with-open [in  (ByteArrayInputStream. bites)
+                out (io/output-stream f)]
+      (io/copy in out))))
+
+(defn empty-dir [dir]
+  (->> (file-seq (io/file dir))
+       (remove #{(io/file dir)})
+       (remove #(is-in-terraform-dir? (.getAbsolutePath %)))
+       (run! utils/delete)))
+
+(defn context->dir [context]
+  (:dir context))
+
+(defn context->env [context]
+  (:env context {}))
+
+(defn context->content [context]
+  (:content context))
+
+(defn with-file [context filename file]
+  (assoc-in context [:content filename] (.getBytes file)))
+
+(defn with-edn-file [context filename edn]
+  (assoc-in context [:content filename] (.getBytes (json/write-str edn))))
+
+(defn spit-context! [context]
+  (empty-dir (context->dir context))
+  (content->dir (context->dir context) (context->content context)))
+
+(defn slurp-context! [context]
+  (-> context (assoc :content (dir->content (context->dir context)))))
+
+(defn execute [context command]
+  (spit-context! context)
+  (let [options  {:out       :inherit
+                  :dir       (context->dir context)
+                  :err       :inherit
+                  :env       (into {} (System/getenv))
+                  :extra-env (cond-> (context->env context)
+                               :always
+                               (merge {"TF_PLUGIN_CACHE_DIR" (get-tf-plugin-cache-dir) "AWS_SDK_LOAD_CONFIG" "1"})
+                               (not (.exists (io/file (context->dir context) ".terraform.lock.hcl")))
+                               (merge {"TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE" "true"}))}
+        response (clojure.core/apply process/sh options (process/tokenize command))]
+    (assoc (slurp-context! context) :result response)))
+
+(defn options->args [options]
+  (map (fn [[k v]] (if (true? v)
+                     (str "-" (name k))
+                     (str "-" (name k) "=" v))) options))
+
+(defn terraform-command [& args+options]
+  (->> (mapcat (fn [x] (if (map? x) (options->args x) [x])) args+options)
+       (into ["terraform"])
+       (strings/join \space)))
+
+(defn terraform [context & args+options]
+  (execute context (clojure.core/apply terraform-command args+options)))
+
+(defn init [context]
+  (terraform context "init"))
+
+(defn show [context input-file]
+  (terraform context "show" {:json true} input-file))
+
+(defn plan [context output-file]
+  (terraform context "plan" {:no-color true :input false :out output-file}))
+
+(defn plan+json [context]
+  (-> context
+      (plan "plan.tfplan")
+      (show "plan.tfplan")
+      (update-in [:result :out] json/read-str)))
+
+(defn apply [context input-file]
+  (terraform context "apply" {:no-color true :input false :auto-approve true} input-file))
+
+(comment
+  (-> (new-context)
+      (with-edn-file "main.tf.json"
+                     {:terraform
+                      {:required_version "1.4.4"
+                       :required_providers
+                       {:aws {:source  "hashicorp/aws"
+                              :version "4.61.0"}}}
+
+                      :provider
+                      {:aws [{:region  "us-east-2"
+                              :profile "dev:AdministratorAccess"}]}
+
+                      :resource
+                      {:aws_s3_bucket {:this {:bucket "fuck-you-paul"}}}})
+      (init))
+
+  )
