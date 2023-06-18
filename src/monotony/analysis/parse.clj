@@ -1,8 +1,8 @@
-(ns monotony.parse
+(ns monotony.analysis.parse
   (:require
     [clj-antlr.core :as antlr]
     [clojure.java.io :as io]
-    [monotony.ast :as ast]))
+    [monotony.analysis.intermediate :as ast]))
 
 (defn create-parser []
   (antlr/parser
@@ -16,8 +16,5 @@
 (defn get-parser []
   (comp ast/recurse (if (bound? #'*ns*) (create-parser) (force parser))))
 
-(def terraform-parser
-  (fn parser
-    ([] ((get-parser)))
-    ([x] ((get-parser) x))
-    ([x & more] ((get-parser) x))))
+(defn parse [content]
+  ((get-parser) content))

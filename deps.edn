@@ -3,14 +3,18 @@
 
  :deps
  {org.clojars.rutledgepaulv/missing {:mvn/version "0.1.41"}
-  cli-matic/cli-matic               {:mvn/version "0.5.4"}
   clj-antlr/clj-antlr               {:mvn/version "0.2.12"}
   meander/epsilon                   {:mvn/version "0.0.650"}
   babashka/process                  {:mvn/version "0.5.21"}
-  org.clojure/data.json             {:mvn/version "2.4.0"}}
+  org.clojure/data.json             {:mvn/version "2.4.0"}
+  io.github.rutledgepaulv/cli       {:git/root "https://github.com/rutledgepaulv/cli"
+                                     :git/sha  "8b95dd18619b6e521217e13a20625fe5d9b3a7a2"}}
 
  :aliases
- {:test      {:extra-paths ["test" "resources-test"]
+ {:dev       {:extra-paths   ["local"]
+              :override-deps {io.github.rutledgepaulv/cli {:local/root "../cli"}}}
+
+  :test      {:extra-paths ["test" "resources-test"]
               :extra-deps  {io.github.cognitect-labs/test-runner
                             {:git/url "https://github.com/cognitect-labs/test-runner.git"
                              :sha     "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}}
@@ -20,6 +24,6 @@
 
   :build     {:extra-deps  {io.github.clojure/tools.build
                             {:git/url "https://github.com/clojure/tools.build.git"
-                             :sha     "75817f39b76375886a9014de3c4b5ab28e9456c8"}}
+                             :sha     "fcb8ecb555d5db341c7fb8310a00c8c86c78aae3"}}
               :extra-paths ["builds"]
               :ns-default  build}}}

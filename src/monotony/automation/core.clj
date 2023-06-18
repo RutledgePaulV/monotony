@@ -1,15 +1,13 @@
-(ns monotony.automation
-  (:require [clojure.data.json :as json]
-            [clojure.edn :as edn]
+(ns monotony.automation.core
+  (:refer-clojure :exclude [apply])
+  (:require [babashka.process :as process]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.string :as strings]
-            [monotony.utils :as utils]
-            [babashka.process :as process])
-  (:refer-clojure :exclude (apply))
-  (:import (java.io ByteArrayInputStream File)
+            [monotony.utils :as utils])
+  (:import (java.io ByteArrayInputStream ByteArrayOutputStream File)
            (java.nio.file Files)
-           (java.nio.file.attribute FileAttribute)
-           (org.apache.commons.io.output ByteArrayOutputStream)))
+           (java.nio.file.attribute FileAttribute)))
 
 (def REGEX #"plugin_cache_dir\s*=\s*\"?([^\s\"]+)\"?(\R|$)")
 
@@ -35,9 +33,10 @@
    (merge context-to-clone {:dir (new-temp-dir)})))
 
 (defn file->bytes [^File f]
-  (with-open [in  (io/input-stream (io/file f))
-              out (ByteArrayOutputStream.)]
-    (io/copy in out)
+  (let [out (ByteArrayOutputStream.)]
+    (with-open [in  (io/input-stream (io/file f))
+                out out]
+      (io/copy in out))
     (.toByteArray out)))
 
 (defn is-in-terraform-dir? [path]
@@ -91,19 +90,22 @@
 (defn slurp-context! [context]
   (-> context (assoc :content (dir->content (context->dir context)))))
 
-(defn execute [context command]
-  (spit-context! context)
-  (let [options  {:out       :inherit
-                  :dir       (context->dir context)
-                  :err       :inherit
-                  :env       (into {} (System/getenv))
-                  :extra-env (cond-> (context->env context)
-                               :always
-                               (merge {"TF_PLUGIN_CACHE_DIR" (get-tf-plugin-cache-dir) "AWS_SDK_LOAD_CONFIG" "1"})
-                               (not (.exists (io/file (context->dir context) ".terraform.lock.hcl")))
-                               (merge {"TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE" "true"}))}
-        response (clojure.core/apply process/sh options (process/tokenize command))]
-    (assoc (slurp-context! context) :result response)))
+(defn execute
+  ([context command]
+   (execute context command {}))
+  ([context command overrides]
+   (spit-context! context)
+   (let [options  {:out       :inherit
+                   :dir       (context->dir context)
+                   :err       :inherit
+                   :env       (into {} (System/getenv))
+                   :extra-env (cond-> (context->env context)
+                                :always
+                                (merge {"TF_PLUGIN_CACHE_DIR" (get-tf-plugin-cache-dir) "AWS_SDK_LOAD_CONFIG" "1"})
+                                (not (.exists (io/file (context->dir context) ".terraform.lock.hcl")))
+                                (merge {"TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE" "true"}))}
+         response (clojure.core/apply process/sh (merge options overrides) (process/tokenize command))]
+     (assoc (slurp-context! context) :result response))))
 
 (defn options->args [options]
   (map (fn [[k v]] (if (true? v)
@@ -115,17 +117,17 @@
        (into ["terraform"])
        (strings/join \space)))
 
-(defn terraform [context & args+options]
-  (execute context (clojure.core/apply terraform-command args+options)))
+(defn terraform [context options & args+options]
+  (execute context (clojure.core/apply terraform-command args+options) options))
 
 (defn init [context]
-  (terraform context "init"))
+  (terraform context {} "init"))
 
 (defn show [context input-file]
-  (terraform context "show" {:json true} input-file))
+  (terraform context {:out :string} "show" {:json true} input-file))
 
 (defn plan [context output-file]
-  (terraform context "plan" {:no-color true :input false :out output-file}))
+  (terraform context {} "plan" {:no-color true :input false :out output-file}))
 
 (defn plan+json [context]
   (-> context
@@ -133,8 +135,17 @@
       (show "plan.tfplan")
       (update-in [:result :out] json/read-str)))
 
+(defn schemas [context]
+  (-> context
+      (terraform {:out :string} "providers schema" {:json true})
+      (update-in [:result :out] json/read-str)))
+
 (defn apply [context input-file]
-  (terraform context "apply" {:no-color true :input false :auto-approve true} input-file))
+  (terraform context {} "apply" {:no-color true :input false :auto-approve true} input-file))
+
+(defn view-plan [context]
+  {:schema (get-in (schemas context) [:result :out])
+   :plan   (get-in (plan+json context) [:result :out])})
 
 (comment
   (-> (new-context)
@@ -150,7 +161,7 @@
                               :profile "dev:AdministratorAccess"}]}
 
                       :resource
-                      {:aws_s3_bucket {:this {:bucket "fuck-you-paul"}}}})
+                      {:aws_s3_bucket {:this {:bucket "this-is-a-test"}}}})
       (init))
 
   )

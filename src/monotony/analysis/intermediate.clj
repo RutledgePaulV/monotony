@@ -1,4 +1,5 @@
-(ns monotony.ast
+(ns monotony.analysis.intermediate
+  "Code for converting from the antlr parse tree to a more convenient intermediate representation."
   (:require [clojure.string :as strings]))
 
 (defmulti parse-node->ast (fn [node] (first node)))
@@ -239,7 +240,6 @@
   {:kind     :module
    :name     (recurse-to-string (nth node 2))
    :children (map recurse (remove string? (drop 4 node)))})
-
 
 (defmethod parse-node->ast :expression_ternary [node]
   (let [condition (recurse (nth node 1))
