@@ -30,7 +30,7 @@
 (defn get-terraform-directories [root]
   (->> (get-tf-files-deep root)
        (remove is-hidden-tf-file?)
-       (map #(.getParentFile %))
+       (keep #(.getParentFile %))
        (distinct)))
 
 (defn get-flattened-dirs [root]

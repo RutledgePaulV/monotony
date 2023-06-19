@@ -1,10 +1,17 @@
-(ns monotony.cli.interface
-  (:require [monotony.cli.commands :as commands]))
+(ns monotony.cli.core
+  (:require [monotony.cli.commands :as commands]
+            [monotony.cli.schemas :as schemas]))
 
+
+(def DirectoryOption
+  {:aliases     #{"-d" "--directory"}
+   :schema      schemas/DirectoryThatExists
+   :description "A directory to begin the search."})
 
 (def ListPlansCommand
   {:command     "list"
    :description "List the directories containing terraform plans."
+   :options     {:directory DirectoryOption}
    :run         #'commands/list-plans})
 
 (def SummarizePlanCommand
@@ -30,7 +37,8 @@
 (def ListModulesCommand
   {:command     "list"
    :description "List the directories containing terraform modules."
-   :run         identity})
+   :options     {:directory DirectoryOption}
+   :run         #'commands/list-modules})
 
 (def SummarizeModulesCommand
   {:command     "summarize"
@@ -54,7 +62,7 @@
 (def VersionCommand
   {:command     "version"
    :description "Prints the version of monotony."
-   :run         identity})
+   :run         #'commands/get-version})
 
 (def MainCommand
   {:command     "monotony"

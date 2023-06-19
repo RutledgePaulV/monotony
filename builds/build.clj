@@ -1,14 +1,12 @@
 (ns build
-  (:require [clojure.tools.build.api :as b]))
+  (:require [clojure.tools.build.api :as b])
+  (:import (java.time Instant)))
 
 (def lib 'io.github.rutledgepaulv/monotony)
 (def version "1.0.0")
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/monotony.jar" (name lib) version))
-
-(defn get-version [_]
-  (print version))
 
 (defn clean [_]
   (b/delete {:path "target"}))
@@ -25,4 +23,7 @@
     {:class-dir class-dir
      :uber-file jar-file
      :basis     basis
+     :manifest  {"commit"    (b/git-process {:git-args "rev-parse HEAD"})
+                 "timestamp" (str (Instant/now))
+                 "version"   version}
      :main      'monotony.core}))

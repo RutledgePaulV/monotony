@@ -7,10 +7,9 @@
             [missing.topology :as top]
             [monotony.analysis.files :as fs]
             [monotony.analysis.parse :as parse]
-            [monotony.utils :as utils])
-  (:refer-clojure :exclude (find)))
+            [monotony.utils :as utils]))
 
-(defmacro find [directory pattern expression]
+(defmacro find-deep [directory pattern expression]
   `(->> (for [[dir# content#] (fs/get-flattened-dirs ~directory)]
           (->> (parse/parse content#)
                (miss/walk-seq)
@@ -19,20 +18,21 @@
         (mapcat identity)))
 
 (defmacro find-shallow [directory pattern expression]
-  `(->> (fs/get-flattened-dir ~directory)
-        (parse/parse)
-        (miss/walk-seq)
-        (mapcat (fn [form#] (m/search form# ~pattern ~expression)))
-        (map #(with-meta % {:dir directory}))))
+  `(let [dir# ~directory]
+     (->> (fs/get-flattened-dir dir#)
+          (parse/parse)
+          (miss/walk-seq)
+          (mapcat (fn [form#] (m/search form# ~pattern ~expression)))
+          (map #(with-meta % {:dir dir#})))))
 
 (defn summarize-shallow [x]
   (frequencies (find-shallow x {:kind :resource :type ?type} ?type)))
 
 (defn summarize-deep [x]
-  (->> (find x {:kind :resource
-                :type ?type
-                :name ?name}
-             [?type ?name])
+  (->> (find-deep x {:kind :resource
+                     :type ?type
+                     :name ?name}
+                  [?type ?name])
        (group-by first)
        (miss/map-groups second)
        (miss/map-vals distinct)
