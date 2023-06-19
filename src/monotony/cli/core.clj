@@ -17,7 +17,8 @@
 (def SummarizePlanCommand
   {:command     "summarize"
    :description "Summarize the selected terraform plans."
-   :run         identity})
+   :options     {:directory DirectoryOption}
+   :run         #'commands/summarize})
 
 (def PlanCommand
   {:command     "plan"
@@ -43,7 +44,8 @@
 (def SummarizeModulesCommand
   {:command     "summarize"
    :description "Summarize the selected terraform modules."
-   :run         identity})
+   :options     {:directory DirectoryOption}
+   :run         #'commands/summarize})
 
 (def PlansNamespace
   {:command     "plans"

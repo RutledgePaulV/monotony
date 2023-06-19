@@ -9,34 +9,14 @@
             [monotony.analysis.parse :as parse]
             [monotony.utils :as utils]))
 
-(defmacro find-deep [directory pattern expression]
-  `(->> (for [[dir# content#] (fs/get-flattened-dirs ~directory)]
-          (->> (parse/parse content#)
-               (miss/walk-seq)
-               (mapcat (fn [form#] (m/search form# ~pattern ~expression)))
-               (map #(with-meta % {:dir dir#}))))
-        (mapcat identity)))
-
-(defmacro find-shallow [directory pattern expression]
+(defmacro find-shallow
+  "Search the top-level files in a directory for a pattern in the AST."
+  [directory pattern expression]
   `(let [dir# ~directory]
      (->> (fs/get-flattened-dir dir#)
           (parse/parse)
           (miss/walk-seq)
-          (mapcat (fn [form#] (m/search form# ~pattern ~expression)))
-          (map #(with-meta % {:dir dir#})))))
-
-(defn summarize-shallow [x]
-  (frequencies (find-shallow x {:kind :resource :type ?type} ?type)))
-
-(defn summarize-deep [x]
-  (->> (find-deep x {:kind :resource
-                     :type ?type
-                     :name ?name}
-                  [?type ?name])
-       (group-by first)
-       (miss/map-groups second)
-       (miss/map-vals distinct)
-       (into (sorted-map))))
+          (mapcat (fn [form#] (m/search form# ~pattern ~expression))))))
 
 (defn find-module-dependency-tree
   [root-path]
@@ -56,7 +36,7 @@
                                       spec      (get modules-by-name qualified)]
                                   {:id        qualified
                                    :source    ?source
-                                   :directory (utils/relative-to root-path (get spec :Dir))
+                                   :directory (utils/resolve-to root-path (get spec :Dir))
                                    :parent    (utils/join-segments parent-fqdn)}))))))]
           (let [branch+children (comp not-empty expand)
                 nodes           (tree-seq branch+children branch+children {:directory root-path :source "." :id ""})
@@ -70,6 +50,23 @@
                          (miss/remove-keys nil?))
              :nodes indexed}))))))
 
+(defmacro find-deep-dir-tree
+  "Search a directory tree of terraform code for a pattern in the AST."
+  [directory pattern expression]
+  `(->> (for [[dir# content#] (fs/get-flattened-dirs ~directory)]
+          (->> (parse/parse content#)
+               (miss/walk-seq)
+               (mapcat (fn [form#] (m/search form# ~pattern ~expression)))))
+        (mapcat identity)))
+
+(defmacro find-deep-module-tree
+  "Search a logical dependency tree of terraform code for a pattern in the AST."
+  [directory pattern expression]
+  `(let [analysis# (find-module-dependency-tree ~directory)]
+     (->> (top/topological-sort (:graph analysis#))
+          (map (fn [node#] (get-in (:nodes analysis#) [node# :directory])))
+          (distinct)
+          (mapcat (fn [dir#] (find-shallow dir# ~pattern ~expression))))))
 
 (comment
 

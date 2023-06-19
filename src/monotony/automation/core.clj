@@ -143,6 +143,10 @@
 (defn apply [context input-file]
   (terraform context {} "apply" {:no-color true :input false :auto-approve true} input-file))
 
+(defn view-state [context]
+  (-> (terraform context {:out :string} "show" {:json true})
+      (update-in [:result :out] json/read-str)))
+
 (defn view-plan [context]
   {:schema (get-in (schemas context) [:result :out])
    :plan   (get-in (plan+json context) [:result :out])})

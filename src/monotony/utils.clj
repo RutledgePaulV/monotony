@@ -11,12 +11,17 @@
       (do (io/delete-file f true)
           (recur (rest fs))))))
 
-(defn relative-to [base path]
+(defn resolve-to [base path]
   (-> (Paths/get ^String base (into-array String []))
       (.resolve ^String path)
       (.normalize)
       (.toFile)
       (.getAbsolutePath)))
+
+(defn relative-to [base path]
+  (-> (Paths/get ^String base (into-array String []))
+      (.relativize ^String (Paths/get path (into-array String [])))
+      (.toString)))
 
 (defn join-segments [& xs]
   (strings/join "." (drop-while strings/blank? xs)))
