@@ -1,10 +1,13 @@
 (ns monotony.registry.terraform
   (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [clojure.string :as strings]
             [meander.epsilon :as m]
             [missing.core :as miss]
             [monotony.analysis.queries :as q]
-            [monotony.registry.versions :as versions]))
+            [monotony.registry.versions :as versions]
+            [monotony.utils :as utils])
+  (:import (java.net URL)))
 
 (defonce version-data
   (delay (-> (slurp "https://releases.hashicorp.com/terraform/index.json")
@@ -59,3 +62,24 @@
     (if-some [selected-version (versions/solve-version-constraints version-numbers constraints)]
       (get by-version selected-version)
       (throw (ex-info "Could not find a solution to the version constraints!" {:constraints constraints})))))
+
+
+(defn ensure-version [{:strs [url version] :as version-descriptor}]
+  (let [expected-path (io/file (System/getProperty "user.home") ".monotony" "bin" (strings/join "." version) "terraform")]
+    (if (.exists expected-path)
+      (str expected-path)
+      (if-not (reduce
+                  (fn [m {:keys [dir name stream] :as x}]
+                    (when (and (not dir) (contains? #{"terraform"} name))
+                      (io/make-parents expected-path)
+                      (with-open [output (io/output-stream expected-path)]
+                        (io/copy stream output))
+                      (.setExecutable expected-path true)
+                      (reduced true)))
+                  false
+                  (utils/zip-stream->reducing (.openStream (URL. url))))
+        (throw (ex-info "Couldn't find terraform binary in zip file." version-descriptor))
+        (str expected-path)))))
+
+(defn terraform-binary [plan-dir]
+  (ensure-version (determine-most-appropriate-tf-version plan-dir)))

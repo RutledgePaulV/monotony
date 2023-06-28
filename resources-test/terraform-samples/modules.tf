@@ -1,3 +1,7 @@
+terraform {
+  required_version = "> 1.2.0"
+}
+
 module "my_module" {
   source = "./testing"
   thing = ""

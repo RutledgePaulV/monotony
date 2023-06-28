@@ -62,11 +62,13 @@
 (defmacro find-deep-module-tree
   "Search a logical dependency tree of terraform code for a pattern in the AST."
   [directory pattern expression]
-  `(let [analysis# (find-module-dependency-tree ~directory)]
-     (->> (top/topological-sort (:graph analysis#))
-          (map (fn [node#] (get-in (:nodes analysis#) [node# :directory])))
-          (distinct)
-          (mapcat (fn [dir#] (find-shallow dir# ~pattern ~expression))))))
+  `(let [root-dir# ~directory]
+     (if-some [analysis# (find-module-dependency-tree root-dir#)]
+       (->> (top/topological-sort (:graph analysis#))
+            (map (fn [node#] (get-in (:nodes analysis#) [node# :directory])))
+            (distinct)
+            (mapcat (fn [dir#] (find-shallow dir# ~pattern ~expression))))
+       (find-shallow root-dir# ~pattern ~expression))))
 
 (comment
 

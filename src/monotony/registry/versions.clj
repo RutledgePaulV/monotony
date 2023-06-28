@@ -2,20 +2,25 @@
   (:require [clojure.string :as strings]
             [missing.core :as miss]))
 
-(defn version-number? [x]
-  (some? (re-find #"^\d+\.\d+\.\d+$" x)))
-
-(defn parse-version [version]
-  (let [[version] (strings/split version #"-" 2)]
-    (mapv parse-long (strings/split version #"\."))))
+(defn parse-version
+  ([version] (parse-version false version))
+  ([pad? version]
+   (let [[version] (strings/split version #"-" 2)]
+     (let [components (mapv parse-long (strings/split version #"\."))]
+       (with-meta
+         (loop [components components]
+           (if (and pad? (< (count components) 3))
+             (recur (conj components 0))
+             components))
+         {:unpadded components})))))
 
 (defn normalize-constraint [x]
-  (-> (if (version-number? x) (str "= " x) x)
+  (-> (if (re-find #"^\d+\.\d+\.\d+$" x) (str "= " x) x)
       (strings/split #"\s+" 2)
-      (update 1 parse-version)))
+      (update 1 (partial parse-version true))))
 
 (defn expand-constraint [x]
-  (->> (strings/split x #"\s*,\s*")
+  (->> (strings/split (strings/trim x) #"\s*,\s*")
        (remove strings/blank?)
        (map normalize-constraint)))
 
@@ -26,7 +31,7 @@
     1 [Long/MAX_VALUE Long/MAX_VALUE Long/MAX_VALUE]))
 
 (defn solve-version-constraints [possibilities constraints]
-  (let [sorted (vec (sort possibilities))]
+  (let [sorted (vec (sort (map (fn [x] (if (string? x) (parse-version false x) x)) possibilities)))]
     (-> (reduce
           (fn [possibilities [operator version]]
             (case operator
@@ -38,7 +43,7 @@
               "<=" (filter #(miss/lte % version) possibilities)
               "~>" (->> possibilities
                         (filter #(miss/gte % version))
-                        (filter #(miss/lt % (upper-bound version))))))
+                        (filter #(miss/lt % (upper-bound (:unpadded (meta version))))))))
           sorted
           (mapcat expand-constraint constraints))
         (miss/greatest))))

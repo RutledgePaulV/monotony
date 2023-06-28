@@ -4,6 +4,7 @@
             [missing.core :as miss]
             [monotony.analysis.files :as fs]
             [monotony.analysis.queries :as q]
+            [monotony.registry.terraform :as tf]
             [monotony.utils :as utils])
   (:import (java.util.jar Manifest)))
 
@@ -31,10 +32,12 @@
        (run! println)))
 
 (defn summarize [{:keys [directory]}]
-  (->> (q/find-deep-module-tree directory
-         {:kind :resource :type ?type :name ?name}
-         [?type ?name])
-       (group-by first)
-       (miss/map-vals count)))
+  (pprint/pprint
+    {:resources (->> (q/find-deep-module-tree directory
+                       {:kind :resource :type ?type :name ?name}
+                       [?type ?name])
+                     (group-by first)
+                     (miss/map-vals count))
+     :version   (tf/determine-most-appropriate-tf-version directory)}))
 
 
