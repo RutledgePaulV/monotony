@@ -40,6 +40,6 @@
                        [?type ?name])
                      (group-by first)
                      (miss/map-vals count))
-     :version   (comment (tf/determine-most-appropriate-tf-version directory))}))
+     :version   (tf/determine-most-appropriate-tf-version directory)}))
 
 

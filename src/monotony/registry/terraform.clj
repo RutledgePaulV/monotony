@@ -7,12 +7,15 @@
             [monotony.analysis.queries :as q]
             [monotony.registry.versions :as versions]
             [monotony.utils :as utils])
-  (:import (java.net URL)))
+  (:import (java.net URI URL)))
 
 (set! *warn-on-reflection* true)
 
 (defonce version-data
-  (delay (-> (slurp "https://releases.hashicorp.com/terraform/index.json")
+  (delay (-> (URI. "https://releases.hashicorp.com/terraform/index.json")
+             (.toURL)
+             (.openStream)
+             (slurp)
              (json/read-str))))
 
 (defn detect-current-architecture []
