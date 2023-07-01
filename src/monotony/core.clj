@@ -3,6 +3,7 @@
             [monotony.cli.core :as mcli])
   (:gen-class))
 
+(set! *warn-on-reflection* true)
 
 (defn maybe-exit [status]
   (if-not (bound? #'*ns*)
@@ -12,7 +13,7 @@
 (defn handle-execution [[action value]]
   (case action
     :documentation (println value)
-    :error (do (.printStackTrace value) (maybe-exit 1))
+    :error (do (.printStackTrace ^Exception value) (maybe-exit 1))
     :result nil
     :invalid (println value)))
 

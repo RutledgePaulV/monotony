@@ -1,6 +1,8 @@
 (ns monotony.automation.plans
   (:require [missing.core :as miss]))
 
+(set! *warn-on-reflection* true)
+
 (defn change->actions [change]
   (get-in change ["change" "actions"]))
 

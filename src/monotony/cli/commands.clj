@@ -8,6 +8,8 @@
             [monotony.utils :as utils])
   (:import (java.util.jar Manifest)))
 
+(set! *warn-on-reflection* true)
+
 (defn get-version [{:keys []}]
   (let [resource (io/resource "META-INF/MANIFEST.MF")]
     (with-open [stream (io/input-stream resource)]
@@ -38,6 +40,6 @@
                        [?type ?name])
                      (group-by first)
                      (miss/map-vals count))
-     :version   (tf/determine-most-appropriate-tf-version directory)}))
+     :version   (comment (tf/determine-most-appropriate-tf-version directory))}))
 
 

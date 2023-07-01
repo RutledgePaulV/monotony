@@ -2,6 +2,8 @@
   "Code for converting from the antlr parse tree to a more convenient intermediate representation."
   (:require [clojure.string :as strings]))
 
+(set! *warn-on-reflection* true)
+
 (defmulti parse-node->ast (fn [node] (first node)))
 
 (defn recurse [node]

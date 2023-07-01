@@ -9,6 +9,8 @@
             [monotony.utils :as utils])
   (:import (java.net URL)))
 
+(set! *warn-on-reflection* true)
+
 (defonce version-data
   (delay (-> (slurp "https://releases.hashicorp.com/terraform/index.json")
              (json/read-str))))

@@ -2,6 +2,8 @@
   (:require [clojure.string :as strings]
             [missing.core :as miss]))
 
+(set! *warn-on-reflection* true)
+
 (defn parse-version
   ([version] (parse-version false version))
   ([pad? version]

@@ -4,6 +4,7 @@
  :deps
  {org.clojars.rutledgepaulv/missing {:mvn/version "0.1.41"}
   clj-antlr/clj-antlr               {:mvn/version "0.2.12"}
+  org.antlr/antlr4                  {:mvn/version "4.13.0"}
   meander/epsilon                   {:mvn/version "0.0.650"}
   babashka/process                  {:mvn/version "0.5.21"}
   org.clojure/data.json             {:mvn/version "2.4.0"}
@@ -13,9 +14,7 @@
   {:mvn/version "0.1.4"}}
 
  :aliases
- {:dev       {:extra-paths   ["local"]}
-
-  :test      {:extra-paths ["test" "resources-test"]
+ {:test      {:extra-paths ["test" "resources-test"]
               :extra-deps  {io.github.cognitect-labs/test-runner
                             {:git/url "https://github.com/cognitect-labs/test-runner.git"
                              :sha     "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}}}
@@ -26,6 +25,6 @@
   :build     {:extra-deps  {io.github.clojure/tools.build
                             {:git/url "https://github.com/clojure/tools.build.git"
                              :sha     "fcb8ecb555d5db341c7fb8310a00c8c86c78aae3"}}
-              :jvm-opts ["-Dclojure.compiler.direct-linking=true"]
+              :jvm-opts    ["-Dclojure.compiler.direct-linking=true"]
               :extra-paths ["builds"]
               :ns-default  build}}}

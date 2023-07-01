@@ -9,6 +9,8 @@
             [monotony.analysis.parse :as parse]
             [monotony.utils :as utils]))
 
+(set! *warn-on-reflection* true)
+
 (defmacro find-shallow
   "Search the top-level files in a directory for a pattern in the AST."
   [directory pattern expression]

@@ -1,6 +1,8 @@
 (ns monotony.cli.schemas
   (:require [clojure.java.io :as io]))
 
+(set! *warn-on-reflection* true)
+
 (def ExistingFile
   [:fn {:error/message "directory must exist"} (fn [x] (.exists (io/file x)))])
 

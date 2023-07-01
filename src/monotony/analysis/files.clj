@@ -4,6 +4,8 @@
             [missing.core :as miss])
   (:import (java.io File)))
 
+(set! *warn-on-reflection* true)
+
 (defn is-tf-file? [^File file]
   (strings/ends-with? (.getName file) ".tf"))
 
@@ -30,12 +32,12 @@
 (defn get-terraform-directories [root]
   (->> (get-tf-files-deep root)
        (remove is-hidden-tf-file?)
-       (keep #(.getParentFile %))
+       (keep #(.getParentFile ^File %))
        (distinct)))
 
 (defn get-flattened-dirs [root]
   (->> (get-tf-files-deep root)
-       (group-by #(.getParentFile %))
+       (group-by #(.getParentFile ^File %))
        (miss/map-groups slurp)
        (miss/reduce-groups (fn [a x] (strings/join \newline [a x])))))
 

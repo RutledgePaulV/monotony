@@ -6,6 +6,7 @@
            (java.nio.file Paths)
            (java.util.zip ZipEntry ZipInputStream)))
 
+(set! *warn-on-reflection* true)
 
 (defn delete [& fs]
   (when-some [f (first fs)]

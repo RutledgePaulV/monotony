@@ -9,6 +9,8 @@
            (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
 
+(set! *warn-on-reflection* true)
+
 (def REGEX #"plugin_cache_dir\s*=\s*\"?([^\s\"]+)\"?(\R|$)")
 
 (defn detect-plugin-cache-dir []
@@ -49,8 +51,8 @@
 (defn dir->content [dir]
   (let [root (io/file dir)]
     (->> (file-seq root)
-         (filter #(.isFile %))
-         (remove #(is-in-terraform-dir? (.getAbsolutePath %)))
+         (filter #(.isFile ^File %))
+         (remove #(is-in-terraform-dir? (.getAbsolutePath ^File %)))
          (map (fn [^File x] [(str (.relativize (.toPath root) (.toPath x))) (file->bytes x)]))
          (into {}))))
 
@@ -65,7 +67,7 @@
 (defn empty-dir [dir]
   (->> (file-seq (io/file dir))
        (remove #{(io/file dir)})
-       (remove #(is-in-terraform-dir? (.getAbsolutePath %)))
+       (remove #(is-in-terraform-dir? (.getAbsolutePath ^File %)))
        (run! utils/delete)))
 
 (defn context->dir [context]
@@ -78,7 +80,7 @@
   (:content context))
 
 (defn with-file [context filename file]
-  (assoc-in context [:content filename] (.getBytes file)))
+  (assoc-in context [:content filename] (.getBytes ^String file)))
 
 (defn with-edn-file [context filename edn]
   (assoc-in context [:content filename] (.getBytes (json/write-str edn))))

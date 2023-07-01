@@ -2,6 +2,7 @@
   (:require [monotony.cli.commands :as commands]
             [monotony.cli.schemas :as schemas]))
 
+(set! *warn-on-reflection* true)
 
 (def DirectoryOption
   {:aliases     #{"-d" "--directory"}
