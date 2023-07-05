@@ -7,7 +7,7 @@
             [monotony.analysis.queries :as q]
             [monotony.registry.versions :as versions]
             [monotony.utils :as utils])
-  (:import (java.net URI URL)))
+  (:import (java.net URI)))
 
 (set! *warn-on-reflection* true)
 
@@ -82,7 +82,7 @@
                       (.setExecutable expected-path true)
                       (reduced true)))
                   false
-                  (utils/zip-stream->reducing (.openStream (URL. url))))
+                  (utils/zip-stream->reducing (.openStream (.toURL (URI. url)))))
         (throw (ex-info "Couldn't find terraform binary in zip file." version-descriptor))
         (str expected-path)))))
 
