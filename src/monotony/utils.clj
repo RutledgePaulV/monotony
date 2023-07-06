@@ -2,7 +2,6 @@
   (:require [clojure.java.io :as io]
             [clojure.set :as sets]
             [clojure.string :as strings]
-            [missing.core :as miss]
             [missing.topology :as top])
   (:import (clojure.lang IReduceInit)
            (java.io FilterInputStream InputStream)
@@ -62,40 +61,43 @@
    summarizing the execution including results, errors, and abandoned
    sections of the graph."
   ([graph visitor]
-   (visit-graph (Executors/newCachedThreadPool) graph visitor))
+   (with-open [executor (Executors/newCachedThreadPool)]
+     (visit-graph executor graph visitor)))
   ([^ExecutorService executor graph visitor]
-   (let [prom   (promise)
-         nodes  (top/nodes graph)
-         graph' (top/inverse graph)
-         state  (add-watch
-                  (atom {:abandoned #{}
-                         :errors    {}
-                         :results   {}})
-                  :watch
-                  (fn [k r o n]
-                    (when (= nodes
-                             (sets/union
-                               (set (:abandoned n))
-                               (set (keys (:errors n)))
-                               (set (keys (:results n)))))
-                      (deliver prom n))))]
-     (letfn [(submit [node]
-               (.submit executor
-                        (reify Callable
-                          (call [this]
-                            (try
-                              (let [result    (visitor node)
-                                    new-state (swap! state update :results assoc node result)]
-                                (doseq [next (shuffle (top/outgoing-neighbors graph node))]
-                                  (when (sets/subset?
-                                          (top/outgoing-neighbors graph' next)
-                                          (set (keys (:results new-state))))
-                                    (submit next))))
-                              (catch Exception e
-                                (swap! state
-                                       (fn [state]
-                                         (-> state
-                                             (update :errors assoc node e)
-                                             (update :abandoned sets/union (disj (top/nodes (top/transitive-select-nodes graph [node])) node)))))))))))]
-       (run! submit (shuffle (top/sources graph)))
-       (deref prom)))))
+   (if (empty? graph)
+     {:errors {} :results {} :abandoned #{}}
+     (let [prom   (promise)
+           nodes  (top/nodes graph)
+           graph' (top/inverse graph)
+           state  (add-watch
+                    (atom {:abandoned #{}
+                           :errors    {}
+                           :results   {}})
+                    :watch
+                    (fn [k r o n]
+                      (when (= nodes
+                               (sets/union
+                                 (set (:abandoned n))
+                                 (set (keys (:errors n)))
+                                 (set (keys (:results n)))))
+                        (deliver prom n))))]
+       (letfn [(submit [node]
+                 (.submit executor
+                          (reify Callable
+                            (call [this]
+                              (try
+                                (let [result    (visitor node)
+                                      new-state (swap! state update :results assoc node result)]
+                                  (doseq [next (shuffle (top/outgoing-neighbors graph node))]
+                                    (when (sets/subset?
+                                            (top/outgoing-neighbors graph' next)
+                                            (set (keys (:results new-state))))
+                                      (submit next))))
+                                (catch Exception e
+                                  (swap! state
+                                         (fn [state]
+                                           (-> state
+                                               (update :errors assoc node e)
+                                               (update :abandoned sets/union (disj (top/nodes (top/transitive-select-nodes graph [node])) node)))))))))))]
+         (run! submit (shuffle (top/sources graph)))
+         (deref prom))))))
