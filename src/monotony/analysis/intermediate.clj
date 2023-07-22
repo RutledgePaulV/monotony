@@ -66,6 +66,11 @@
   {:kind     :terraform-block
    :children (map recurse (remove string? (rest node)))})
 
+(defmethod parse-node->ast :provider_block [node]
+  {:kind     :provider-block
+   :type     (recurse (nth node 2))
+   :children (map recurse (remove string? (drop 3 node)))})
+
 (defmethod parse-node->ast :namespaced_block [node]
   {:kind     :namespaced-block
    :name     (recurse (nth node 1))
