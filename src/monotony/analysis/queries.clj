@@ -16,7 +16,7 @@
   [directory pattern expression]
   `(let [dir# ~directory]
      (->> (fs/get-flattened-dir dir#)
-          (parse/parse)
+          (parse/text->ir)
           (miss/walk-seq)
           (mapcat (fn [form#] (m/search form# ~pattern ~expression))))))
 
@@ -56,7 +56,7 @@
   "Search a directory tree of terraform code for a pattern in the AST."
   [directory pattern expression]
   `(->> (for [[dir# content#] (fs/get-flattened-dirs ~directory)]
-          (->> (parse/parse content#)
+          (->> (parse/text->ir content#)
                (miss/walk-seq)
                (mapcat (fn [form#] (m/search form# ~pattern ~expression)))))
         (mapcat identity)))

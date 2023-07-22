@@ -26,6 +26,9 @@
 (defn is-tf-lock-file? [^File f]
   (= ".terraform.lock.hcl" (.getName f)))
 
+(defn is-manifest-file? [^File f]
+  (= "monotony.edn" (.getName f)))
+
 (defn is-plan-dir? [^File dir]
   (miss/seek is-tf-lock-file? (.listFiles dir)))
 
@@ -53,3 +56,7 @@
 (defn find-terraform-plans [root]
   (->> (get-terraform-directories root)
        (filter is-plan-dir?)))
+
+(defn find-manifest [root]
+  (->> (file-seq (io/file root))
+       (miss/seek is-manifest-file?)))

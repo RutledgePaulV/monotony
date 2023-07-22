@@ -12,7 +12,10 @@
     {:use-alternates? true}))
 
 (def parser
-  (comp ast/recurse (create-parser)))
+  (create-parser))
 
-(defn parse [content]
+(defn text->ast [content]
   (parser content))
+
+(defn text->ir [content]
+  (ast/recurse (text->ast content)))

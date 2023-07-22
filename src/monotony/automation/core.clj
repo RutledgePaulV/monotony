@@ -70,6 +70,9 @@
        (remove #(is-in-terraform-dir? (.getAbsolutePath ^File %)))
        (run! utils/delete)))
 
+(defn dir->context [dir]
+  {:dir (io/file dir)})
+
 (defn context->dir [context]
   (:dir context))
 

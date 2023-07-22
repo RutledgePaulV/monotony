@@ -1,0 +1,3 @@
+{:dependencies
+ {"dev"  #{"org"}
+  "prod" #{"org"}}}

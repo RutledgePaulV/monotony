@@ -27,9 +27,9 @@
     (reduce (fn [graph node]
               (loop [neighbors (disj (set (random-sample (rand) nodes)) node)]
                 (let [graph' (update graph node (fnil sets/union #{}) neighbors)]
-                  (if (some? (top/topological-sort graph'))
-                    graph'
-                    (recur (disj (set (random-sample (rand) nodes)) node))))))
+                  (if (top/cyclical? graph')
+                    (recur (disj (set (random-sample (rand) nodes)) node))
+                    graph'))))
             {}
             nodes)))
 
