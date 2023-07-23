@@ -23,7 +23,7 @@
     "aarch64" "arm64"
     "amd64" "amd64"
     "arm" "arm"
-    "x86" "386"
+    "x86_64" "386"
     (throw (ex-info "Unsupported architecture" {:os (System/getProperty "os.arch")}))))
 
 (defn detect-current-os []
@@ -74,15 +74,16 @@
     (if (.exists expected-path)
       (str expected-path)
       (if-not (reduce
-                  (fn [m {:keys [dir name stream] :as x}]
-                    (when (and (not dir) (contains? #{"terraform"} name))
-                      (io/make-parents expected-path)
-                      (with-open [output (io/output-stream expected-path)]
-                        (io/copy stream output))
-                      (.setExecutable expected-path true)
-                      (reduced true)))
-                  false
-                  (utils/zip-stream->reducing (.openStream (.toURL (URI. url)))))
+                (fn [agg {:keys [dir name stream]}]
+                  (if (and (not dir) (contains? #{"terraform"} name))
+                    (do (io/make-parents expected-path)
+                        (with-open [output (io/output-stream expected-path)]
+                          (io/copy stream output))
+                        (.setExecutable expected-path true)
+                        (reduced true))
+                    agg))
+                false
+                (utils/zip-stream->reducing (.openStream (.toURL (URI. url)))))
         (throw (ex-info "Couldn't find terraform binary in zip file." version-descriptor))
         (str expected-path)))))
 

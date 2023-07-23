@@ -7,7 +7,7 @@
 (defn find-unparseable-files [root]
   (for [file (fs/get-tf-files-deep root)
         :let [content (slurp file)
-              e       (try (parse/text->ir content) nil (catch Exception e e))]
+              e       (try (parse/text->ast content) nil (catch Exception e e))]
         :when (some? e)]
     {:file   (.getAbsolutePath file)
      :errors (->> (deref e)
