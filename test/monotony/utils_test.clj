@@ -7,17 +7,17 @@
 
 (def TestSampleSize 100)
 
-(defn partially-ordered? [partial-ordering xs]
-  (:ordered
-    (reduce (fn [{[head & remainder :as ordering] :ordering ordered :ordered} x]
-              (if (contains? head x)
-                (let [new-head (disj head x)]
-                  (if (empty? new-head)
-                    {:ordering remainder :ordered (and ordered true)}
-                    {:ordering (cons new-head remainder) :ordered ordered}))
-                (reduced {:ordering [] :ordered false})))
-            {:ordering partial-ordering :ordered true}
-            xs)))
+(defn respects-graph-order? [graph xs]
+  (let [normalized (top/normalize graph)]
+    (:ordered
+      (reduce
+        (fn [{:keys [seen ordered]} node]
+          (let [dependencies (set (top/incoming-neighbors normalized node))]
+            (if (and ordered (sets/subset? dependencies seen))
+              {:seen (conj seen node) :ordered true}
+              (reduced {:seen (conj seen node) :ordered false}))))
+        {:seen #{} :ordered true}
+        xs))))
 
 (defmacro attempt [times & body]
   `(miss/dowork [_# [(range ~times) ~times]] ~@body))
@@ -51,8 +51,8 @@
     (attempt TestSampleSize
       (let [graph  (random-dag)
             order  (atom [])
-            result (visit-graph graph (fn [node] (peek (swap! order conj node)) (Thread/sleep 50)))]
-        (is (partially-ordered? (top/topological-sort-with-grouping graph) @order))
+            result (visit-graph graph (fn [node] (peek (swap! order conj node))))]
+        (is (respects-graph-order? graph @order))
         (is (= (set (keys (:results result))) (top/nodes graph)))
         (is (empty? (:errors result)))
         (is (empty? (:abandoned result)))))))
