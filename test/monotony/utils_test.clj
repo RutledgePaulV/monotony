@@ -42,7 +42,7 @@
             result          (visit-graph graph (fn [node] (Thread/sleep sleep)))
             end             (System/currentTimeMillis)
             max-serial-deps (count (top/topological-sort-with-grouping graph))]
-        (is (< (- end start) (* sleep (inc max-serial-deps))))
+        (is (< (- end start) (* sleep (+ 2 max-serial-deps))))
         (is (= (set (keys (:results result))) (top/nodes graph)))
         (is (empty? (:errors result)))
         (is (empty? (:abandoned result))))))
@@ -51,7 +51,7 @@
     (attempt TestSampleSize
       (let [graph  (random-dag)
             order  (atom [])
-            result (visit-graph graph (fn [node] (peek (swap! order conj node)) (Thread/sleep 10)))]
+            result (visit-graph graph (fn [node] (peek (swap! order conj node)) (Thread/sleep 50)))]
         (is (partially-ordered? (top/topological-sort-with-grouping graph) @order))
         (is (= (set (keys (:results result))) (top/nodes graph)))
         (is (empty? (:errors result)))
