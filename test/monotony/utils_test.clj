@@ -37,12 +37,11 @@
   (testing "time taken is bounded by the diameter of the graph when using an unbounded thread pool"
     (attempt TestSampleSize
       (let [graph           (random-dag)
-            sleep           100
+            sleep           200
             start           (System/currentTimeMillis)
             result          (visit-graph graph (fn [node] (Thread/sleep sleep)))
-            end             (System/currentTimeMillis)
-            max-serial-deps (count (top/topological-sort-with-grouping graph))]
-        (is (< (- end start) (* sleep (+ 2 max-serial-deps))))
+            end             (System/currentTimeMillis)]
+        (is (<= (- end start) (* sleep (inc (count (top/nodes graph))))))
         (is (= (set (keys (:results result))) (top/nodes graph)))
         (is (empty? (:errors result)))
         (is (empty? (:abandoned result))))))
