@@ -5,7 +5,7 @@ export PATH="/Library/Java/JavaVirtualMachines/graalvm-jdk-20.0.1+9.1/Contents/H
 clojure -X:build uberjar
 native-image -jar target/monotony.jar \
     --features=InitAtBuildTimeFeature \
-    -H:IncludeResources='.*\.(g4|edn|tokens|clj|st|stg)$' \
+    -H:IncludeResources='.*\.(g4|edn|tokens|clj|st|stg|MF)$' \
     --no-fallback target/monotony \
     --enable-url-protocols=https \
     --verbose \
