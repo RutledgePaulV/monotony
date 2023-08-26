@@ -2,7 +2,8 @@
  ["src" "resources"]
 
  :deps
- {org.clojars.rutledgepaulv/missing {:mvn/version "0.1.41"}
+ {org.clojure/clojure               {:mvn/version "1.11.1"}
+  org.clojars.rutledgepaulv/missing {:mvn/version "0.1.41"}
   clj-antlr/clj-antlr               {:mvn/version "0.2.12"}
   org.antlr/antlr4                  {:mvn/version "4.13.0"}
   meander/epsilon                   {:git/url "https://github.com/rutledgepaulv/meander"
